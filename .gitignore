@@ -14,3 +14,7 @@ imagens/
 .netrc
 *.env
 *.env.*
+
+# Arquivos Mac
+.DS_Store
+.vscode/
