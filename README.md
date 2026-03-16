@@ -1,49 +1,54 @@
 # Downloader Copernicus
 
-Projeto em Python para autenticar no Copernicus Data Space Ecosystem (CDSE), localizar um produto Sentinel pelo nome e baixar o arquivo `.zip` para uma pasta local.
+Aplicacao em Python para buscar e baixar produtos Sentinel no Copernicus Data Space Ecosystem (CDSE), com autenticacao via `.netrc` e interface grafica em Qt.
 
-O script atual foi preparado para um fluxo simples e direto: informar o nome da imagem no próprio código e salvar o download automaticamente na pasta `imagens/` do projeto.
+O projeto possui dois pontos principais:
+
+- [`main.py`](./main.py): inicia a interface grafica do downloader
+- [`copernicus_downloader.py`](./copernicus_downloader.py): contem a classe responsavel pela autenticacao, busca do produto e download do arquivo
 
 ## Funcionalidades
 
-- Autenticação no CDSE com credenciais armazenadas em `.netrc`
-- Busca exata do produto no catálogo OData pelo campo `Name`
-- Fallback automático para nomes com sufixo `.SAFE`
-- Download autenticado do produto em formato `.zip`
-- Salvamento automático na pasta `imagens/`
+- autenticacao no CDSE com credenciais locais em `.netrc`
+- busca do produto pelo nome exato no catalogo OData
+- tentativa automatica com e sem o sufixo `.SAFE`
+- download do produto em `.zip`
+- interface grafica para informar o nome da imagem e acompanhar mensagens
+- salvamento automatico na pasta `imagens/`
 
 ## Estrutura do projeto
 
 ```text
 downloadercopernicus/
 |-- imagens/
+|-- ui/
+|   |-- janela1.ui
 |-- copernicus_downloader.py
+|-- main.py
 |-- pixi.toml
 |-- pixi.lock
 |-- README.md
+|-- LICENSE
 ```
 
 ## Requisitos
 
 - Windows 64-bit
 - [Pixi](https://pixi.sh/latest/) instalado
-- Conta ativa no Copernicus Data Space Ecosystem
-- Arquivo `.netrc` configurado no diretório do usuário
+- conta ativa no Copernicus Data Space Ecosystem
+- arquivo `.netrc` configurado no diretorio do usuario
 
-Dependências atuais do projeto:
+Dependencias declaradas no projeto:
 
 - Python `>=3.14.3,<3.15`
 - `requests`
+- `qgis`
 
-## Configuração de credenciais
+## Configuracao de credenciais
 
-O script lê as credenciais a partir de:
+As credenciais nao ficam no codigo. O acesso ao CDSE e feito a partir do arquivo `.netrc` do proprio usuario.
 
-```text
-C:\Users\{seu_usuario}\.netrc
-```
-
-Exemplo de estrutura esperada:
+Exemplo:
 
 ```text
 machine https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token
@@ -51,53 +56,82 @@ login SEU_LOGIN
 password SUA_SENHA
 ```
 
-Observações:
+Observacoes importantes:
 
-- Não versione o arquivo `.netrc`
-- Cada pessoa que for usar o projeto deve criar e configurar o seu próprio `.netrc`
-- Mantenha as credenciais fora do código-fonte
-- O script também tenta um fallback para `identity.dataspace.copernicus.eu`, caso necessário
+- nao publique o arquivo `.netrc`
+- cada pessoa que usar o projeto deve configurar o seu proprio `.netrc`
+- mantenha usuario, senha e tokens fora do repositorio
+- se o repositorio for publico, as credenciais devem existir somente no ambiente local de quem executa o projeto
 
-Se o repositório for público, esse cuidado é obrigatório: as credenciais devem existir apenas no ambiente local de quem executa o projeto.
+## Instalacao
 
-## Instalação
-
-Clone o repositório e entre na pasta do projeto:
+Clone o repositorio e entre na pasta:
 
 ```powershell
 git clone <URL_DO_REPOSITORIO>
 cd downloadercopernicus
 ```
 
-Crie o ambiente com Pixi:
+Instale o ambiente:
 
 ```powershell
 pixi install
 ```
 
-## Como usar
+## Como executar
 
-Abra o arquivo [`copernicus_downloader.py`](./copernicus_downloader.py) e edite a constante `NOME_IMAGEM`:
+### Interface grafica
+
+Para abrir a janela do downloader:
+
+```powershell
+pixi run python .\main.py
+```
+
+Se o comando `pixi` nao estiver disponivel no terminal, voce tambem pode usar diretamente o Python do ambiente local:
+
+```powershell
+& ".\.pixi\envs\default\python.exe" ".\main.py"
+```
+
+Na interface, basta:
+
+1. informar o nome da imagem Sentinel
+2. clicar em `Download`
+3. acompanhar o status e as mensagens na propria janela
+
+### Uso direto pela classe
+
+Tambem e possivel usar a classe [`CopernicusDownloader`](./copernicus_downloader.py) em outros scripts Python.
+
+Exemplo:
 
 ```python
-NOME_IMAGEM = "S2A_MSIL2A_20220503T130251_N0510_R095_T23KPS_20241129T025850"
+from copernicus_downloader import CopernicusDownloader, PASTA_IMAGENS, ARQUIVO_NETRC
+
+downloader = CopernicusDownloader(
+    pasta_destino=str(PASTA_IMAGENS),
+    netrc_path=str(ARQUIVO_NETRC),
+)
+
+caminho = downloader.download("S2A_MSIL2A_20220503T130251_N0510_R095_T23KPS_20241129T025850")
+print(caminho)
 ```
 
-Depois execute:
+## Interface
 
-```powershell
-pixi run python .\copernicus_downloader.py
-```
+O arquivo [`ui/janela1.ui`](./ui/janela1.ui) define a janela principal da aplicacao. Ele foi pensado para funcionar como base da interface e pode ser evoluido com novos recursos, como:
 
-Se preferir, também funciona com Python já disponível no sistema:
+- barra de progresso
+- selecao de pasta de destino
+- fila de downloads
+- leitura de lista de produtos
 
-```powershell
-python .\copernicus_downloader.py
-```
+O arquivo [`main.py`](./main.py) faz a integracao entre essa interface e a classe de download.
 
 ## Saida esperada
 
-Ao concluir com sucesso, o arquivo será salvo em:
+Os arquivos baixados sao salvos automaticamente em:
 
 ```text
 imagens/<NOME_DO_PRODUTO>.zip
@@ -111,39 +145,47 @@ imagens/S2A_MSIL2A_20220503T130251_N0510_R095_T23KPS_20241129T025850.SAFE.zip
 
 ## Como funciona
 
-O fluxo implementado pelo script é:
+O fluxo atual do downloader e:
 
-1. Ler `login` e `password` do arquivo `.netrc`
-2. Solicitar um `access_token` ao endpoint de autenticação do CDSE
-3. Consultar o catálogo OData pelo nome exato do produto
-4. Obter o `Id` do produto encontrado
-5. Fazer o download autenticado do conteúdo
-6. Salvar o arquivo na pasta `imagens/`
+1. ler `login` e `password` do `.netrc`
+2. solicitar um `access_token` ao endpoint de autenticacao do CDSE
+3. consultar o catalogo OData pelo nome do produto
+4. localizar o `Id` do produto encontrado
+5. baixar o conteudo autenticado do produto
+6. salvar o arquivo na pasta `imagens/`
+
+Na interface grafica, o download roda em uma `QThread`, evitando travar a janela durante a operacao.
 
 ## Tratamento de erros
 
-O script já possui mensagens e exceções para cenários comuns:
+O projeto ja trata cenarios comuns, como:
 
 - `.netrc` ausente
 - credenciais incompletas
-- produto não encontrado
+- produto nao encontrado
 - produto offline
-- falha na autenticação
+- falha na autenticacao
 - erro HTTP durante o download
+
+As mensagens de erro aparecem na interface e tambem podem ser tratadas no uso programatico da classe.
 
 ## Roadmap
 
-Melhorias previstas para as próximas versões:
+Melhorias previstas:
 
-- leitura de uma lista de produtos a partir de arquivo texto
+- leitura de lista de imagens a partir de arquivo texto
 - download em lote
+- barra de progresso real
+- escolha da pasta de destino pela interface
 - logs mais detalhados
-- barra de progresso
-- parametrização por linha de comando
 - testes automatizados
 
-## Referências
+## Referencias
 
 - [Copernicus Data Space Ecosystem](https://dataspace.copernicus.eu/)
-- [Documentação de autenticação](https://documentation.dataspace.copernicus.eu/APIs/Token.html)
-- [Documentação da OData API](https://documentation.dataspace.copernicus.eu/APIs/OData.html)
+- [Documentacao de autenticacao](https://documentation.dataspace.copernicus.eu/APIs/Token.html)
+- [Documentacao da OData API](https://documentation.dataspace.copernicus.eu/APIs/OData.html)
+
+## Licenca
+
+Este projeto esta licenciado sob a licenca MIT. Veja o arquivo [`LICENSE`](./LICENSE).
