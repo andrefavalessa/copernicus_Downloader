@@ -6,12 +6,31 @@ import requests
 
 
 class CopernicusDownloader:
+    """
+    Classe responsável por buscar e baixar um produto no catálogo
+    Copernicus Data Space Ecosystem.
+
+    A classe centraliza toda a lógica de:
+    - leitura de credenciais;
+    - autenticação via token;
+    - busca de um produto pelo nome;
+    - download do arquivo .zip.
+
+    Atributos de classe:
+    - TOKEN_URL: endpoint usado para obter o token de autenticação.
+    - CATALOGUE_URL: endpoint do catálogo de produtos.
+    - DOWNLOAD_URL: endpoint de download do produto selecionado.
+    - CLIENT_ID: identificador do cliente usado na autenticação.
+    - TIMEOUT: tempo máximo de espera das requisições HTTP.
+    - CHUNK_SIZE: tamanho dos blocos usados no download em streaming.
+    """
+
     TOKEN_URL = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
     CATALOGUE_URL = "https://catalogue.dataspace.copernicus.eu/odata/v1/Products"
     DOWNLOAD_URL = "https://download.dataspace.copernicus.eu/odata/v1/Products({product_id})/$value"
     CLIENT_ID = "cdse-public"
     TIMEOUT = 120
-    CHUNK_SIZE = 1024 * 1024
+    CHUNK_SIZE = 4*1024 * 1024
 
     def __init__(
         self,
@@ -20,25 +39,52 @@ class CopernicusDownloader:
         machine_name: Optional[str] = None,
         session: Optional[requests.Session] = None,
     ) -> None:
+        """
+        Inicializa o downloader.
+
+        Atributos de instância:
+        - self.pasta_destino: pasta onde o arquivo baixado será salvo.
+        - self.netrc_path: caminho para o arquivo .netrc com as credenciais.
+        - self.machine_name: nome da máquina/host usado para localizar as credenciais.
+        - self.session: sessão HTTP reutilizável do requests.
+        """
         self.pasta_destino = Path(pasta_destino)
+        # Garante que a pasta de destino exista antes do download.
         self.pasta_destino.mkdir(parents=True, exist_ok=True)
 
         self.netrc_path = Path(netrc_path or Path.home() / ".netrc")
+        # Se nenhum nome de máquina for informado, usa a própria URL do token.
         self.machine_name = machine_name or self.TOKEN_URL
+        # Reaproveita uma sessão existente ou cria uma nova.
         self.session = session or requests.Session()
 
     def download(self, nome_imagem: str) -> Path:
+        """
+        Método principal da classe.
+
+        Recebe o nome da imagem/produto, busca esse produto no catálogo,
+        obtém um token de autenticação e faz o download do arquivo.
+
+        Parâmetro:
+        - nome_imagem: nome do produto desejado.
+
+        Retorno:
+        - caminho completo do arquivo salvo no disco.
+        """
         nome_consulta = nome_imagem.strip()
         if not nome_consulta:
             raise ValueError("O nome da imagem nao pode ser vazio.")
 
+        # Busca no catálogo o produto correspondente ao nome informado.
         produto = self._buscar_produto(nome_consulta)
+        # Obtém o token de acesso necessário para baixar o arquivo.
         token = self._obter_token()
 
         nome_arquivo = f"{produto['Name']}.zip"
         caminho_saida = self.pasta_destino / nome_arquivo
         url_download = self.DOWNLOAD_URL.format(product_id=produto["Id"])
 
+        # Faz o download em streaming para evitar carregar tudo na memória.
         with self.session.get(
             url_download,
             headers={"Authorization": f"Bearer {token}"},
@@ -54,6 +100,12 @@ class CopernicusDownloader:
         return caminho_saida
 
     def _obter_token(self) -> str:
+        """
+        Faz a autenticação no serviço da Copernicus e retorna o access token.
+
+        Função interna da classe.
+        Ela usa as credenciais lidas do .netrc para solicitar um token OAuth.
+        """
         usuario, senha = self._ler_credenciais()
         response = self.session.post(
             self.TOKEN_URL,
@@ -73,6 +125,16 @@ class CopernicusDownloader:
         return access_token
 
     def _ler_credenciais(self) -> tuple[str, str]:
+        """
+        Lê as credenciais do arquivo .netrc.
+
+        A função tenta localizar login e senha usando o nome da máquina.
+        Se não encontrar pelo parser padrão da biblioteca netrc, tenta uma
+        leitura manual linha por linha.
+
+        Retorno:
+        - tupla (login, senha)
+        """
         if not self.netrc_path.exists():
             raise FileNotFoundError(f"Arquivo .netrc nao encontrado em: {self.netrc_path}")
 
@@ -94,6 +156,17 @@ class CopernicusDownloader:
         return login, password
 
     def _ler_credenciais_manualmente(self) -> Optional[tuple[str, None, str]]:
+        """
+        Faz uma leitura manual do arquivo .netrc.
+
+        Essa função serve como alternativa caso o parser padrão não encontre
+        corretamente as credenciais.
+
+        Retorno:
+        - tupla no formato (login, None, password), para manter compatibilidade
+          com a estrutura retornada por netrc.authenticators().
+        - None, se nada for encontrado.
+        """
         machine_atual = None
         login = None
         password = None
@@ -109,6 +182,7 @@ class CopernicusDownloader:
 
             chave, valor = partes
             if chave == "machine":
+                # Se já terminou de ler uma máquina válida, retorna suas credenciais.
                 if machine_atual == self.machine_name and login and password:
                     return login, None, password
                 machine_atual = valor
@@ -124,6 +198,15 @@ class CopernicusDownloader:
         return None
 
     def _buscar_produto(self, nome_imagem: str) -> dict:
+        """
+        Busca um produto pelo nome exato.
+
+        A função tenta primeiro o nome informado pelo usuário.
+        Se ele não terminar em .SAFE, também tenta a versão com esse sufixo.
+
+        Retorno:
+        - dicionário com os dados do produto encontrado.
+        """
         nomes_tentados = [nome_imagem]
         if not nome_imagem.endswith(".SAFE"):
             nomes_tentados.append(f"{nome_imagem}.SAFE")
@@ -139,6 +222,16 @@ class CopernicusDownloader:
         )
 
     def _buscar_por_nome_exato(self, nome_imagem: str) -> Optional[dict]:
+        """
+        Executa uma consulta OData filtrando pelo nome exato do produto.
+
+        Parâmetro:
+        - nome_imagem: nome exato do produto no catálogo.
+
+        Retorno:
+        - dicionário com os dados do produto, se encontrado;
+        - None, se nenhum produto corresponder.
+        """
         filtro = f"Name eq '{self._escapar_valor_odata(nome_imagem)}'"
         response = self.session.get(
             self.CATALOGUE_URL,
@@ -167,15 +260,29 @@ class CopernicusDownloader:
 
     @staticmethod
     def _escapar_valor_odata(valor: str) -> str:
+        """
+        Escapa aspas simples para que o valor possa ser usado com segurança
+        em um filtro OData.
+
+        Como é um método estático, ele não depende de nenhum atributo da instância.
+        """
         return valor.replace("'", "''")
 
 
+# Constantes de uso direto no script.
+# Elas facilitam testes rápidos sem precisar digitar os valores toda vez.
 NOME_IMAGEM = "S2A_MSIL2A_20220503T130251_N0510_R095_T23KPS_20241129T025850"
 PASTA_IMAGENS = Path(__file__).resolve().parent / "imagens"
 ARQUIVO_NETRC = Path.home() / ".netrc"
 
 
 def main() -> None:
+    """
+    Função principal do script.
+
+    Cria um objeto da classe CopernicusDownloader usando a pasta de destino
+    e o arquivo .netrc definidos acima, depois inicia o download.
+    """
     downloader = CopernicusDownloader(
         pasta_destino=str(PASTA_IMAGENS),
         netrc_path=str(ARQUIVO_NETRC),
