@@ -1,0 +1,12 @@
+[general]
+name=Copernicus Downloader
+qgisMinimumVersion=3.0
+description=Baixa um arquivo a partir de uma URL e o adiciona ao projeto como camada raster ou vetorial.
+version=0.1.0
+author=Andre Leonardi Favalessa e Mateus Lemos de Abrantes
+email=andrefavalessa@gmail.com
+about=Plugin com interface grafica para informar URL, pasta de destino e tipo da camada, baixando o arquivo e adicionando-o ao projeto do QGIS.
+category=Web
+experimental=False
+deprecated=False
+hasProcessingProvider=False

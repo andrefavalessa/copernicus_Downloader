@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>760</width>
+    <height>420</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Downloader Copernicus</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayoutPrincipal">
+    <property name="leftMargin">
+     <number>20</number>
+    </property>
+    <property name="topMargin">
+     <number>20</number>
+    </property>
+    <property name="rightMargin">
+     <number>20</number>
+    </property>
+    <property name="bottomMargin">
+     <number>20</number>
+    </property>
+    <property name="spacing">
+     <number>14</number>
+    </property>
+    <item>
+     <widget class="QLabel" name="labelTitulo">
+      <property name="text">
+       <string>Baixar imagem Sentinel do Copernicus Data Space</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="labelDescricao">
+      <property name="text">
+       <string>Informe o nome exato do produto e clique em Download. As credenciais serao lidas do arquivo .netrc local.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="groupBoxDownload">
+      <property name="title">
+       <string>Dados do download</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayoutDownload">
+       <property name="horizontalSpacing">
+        <number>12</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>10</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="QLabel" name="labelNomeImagem">
+         <property name="text">
+          <string>Nome da imagem</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="lineEditNomeImagem">
+         <property name="placeholderText">
+          <string>Ex.: S2A_MSIL2A_20220503T130251_N0510_R095_T23KPS_20241129T025850</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="labelPastaTitulo">
+         <property name="text">
+          <string>Pasta de destino</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLabel" name="labelPastaDestino">
+         <property name="text">
+          <string>imagens/</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="labelNetrcTitulo">
+         <property name="text">
+          <string>Credenciais</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLabel" name="labelNetrc">
+         <property name="text">
+          <string>.netrc do usuario</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayoutAcoes">
+      <item>
+       <widget class="QPushButton" name="pushButtonDownload">
+        <property name="minimumSize">
+         <size>
+          <width>140</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Download</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelStatus">
+        <property name="text">
+         <string>Pronto para iniciar.</string>
+        </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="groupBoxLog">
+      <property name="title">
+       <string>Mensagens</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayoutLog">
+       <item>
+        <widget class="QPlainTextEdit" name="plainTextEditLog">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+         <property name="placeholderText">
+          <string>As mensagens do download aparecerao aqui.</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>760</width>
+     <height>26</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
